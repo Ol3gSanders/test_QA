@@ -18,12 +18,26 @@ import psutil
 
 cpu_list, handle_list, memory_used, memory_free = [], [], [], []
 proc = psutil.Process()
-total = ['CPU', 'Handle', 'Used Memory', 'Free Memory']
+current_process = psutil.Process()
+total = ['CPU', 'Handle', 'Working Set Memory', 'Private Bytes Memory']
 f_name = 'test_1.json'
 
 
-num = 10                                                            # количество секунд
+num = 10     # количество секунд
 path = r'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\System Tools\Task Manager.lnk'     # путь к файлу
+
+
+# функция получения id процесса
+def get_pid(name):
+    process_name = 'Taskmgr'
+    pid = None
+    for current_process in psutil.process_iter():
+        if process_name in current_process.name():
+            pid = current_process.pid
+    return pid
+
+
+p = psutil.Process(get_pid('Taskmgr'))
 
 
 def test_1(num, path):
@@ -31,14 +45,18 @@ def test_1(num, path):
     while num > 0:
         print(f'осталось {num} секунд')
         time.sleep(1)                                               # снимаем статистику раз в секунду
-        cpu = psutil.cpu_percent()
+        cpu = p.cpu_percent()
         handle = proc.open_files()
+
+        wset = p.memory_info()
+        private_bytes = p.memory_info()
+
         memory = psutil.virtual_memory()
 
         cpu_list.append(cpu)                                        # добавление загрузки CPU в процентах
         handle_list.append(len(handle))                             # добавление количества открытых хэндлов
-        memory_used.append(memory[-1] // 1024 ** 2)                 # добавление используемой памяти в МБ
-        memory_free.append(memory[-2] // 1024 ** 2)                 # добавление свободной памяти в МБ
+        memory_used.append(wset[4] // 1024 ** 2)                    # добавление используемой памяти в МБ
+        memory_free.append(private_bytes[-1] // 1024 ** 2)          # добавление свободной памяти в МБ
 
         num -= 1
 
@@ -49,6 +67,7 @@ def test_1(num, path):
 
     stats_list = [cpu_dict, handle_dict, used_memory_dict, free_memory_dict]
 
+    # преобразование статистики в словарь
     total_stats = dict(zip(total, stats_list))
 
     print(f'\nСтатистика успешно загружена в файл {f_name}')
